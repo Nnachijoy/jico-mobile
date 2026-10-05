@@ -201,7 +201,6 @@ export default function ProductDetail() {
         </Pressable>
       </View>
 
-      {/* Added-to-cart bottom sheet */}
       <Modal
         visible={sheetOpen}
         transparent
@@ -318,8 +317,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     textTransform: 'uppercase',
   },
-
-  // Bottom sheet
   sheetBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',

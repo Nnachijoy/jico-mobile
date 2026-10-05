@@ -11,6 +11,7 @@ import {
   Alert,
   RefreshControl,
   AppState,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RealtimeChannel } from '@supabase/supabase-js';
@@ -106,7 +107,6 @@ export default function Cart() {
     load();
   }, [load]);
 
-  // Polling every 3 seconds so cart stays in sync with the website
   useEffect(() => {
     const interval = setInterval(() => {
       load();
@@ -114,7 +114,6 @@ export default function Cart() {
     return () => clearInterval(interval);
   }, [load]);
 
-  // Real-time subscription (bonus)
   useEffect(() => {
     if (!user) return;
 
@@ -155,7 +154,6 @@ export default function Cart() {
     };
   }, [user, load]);
 
-  // Refresh on app foreground
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active') load();
@@ -217,7 +215,7 @@ export default function Cart() {
         <FlatList
           data={items}
           keyExtractor={(i) => i.id}
-          contentContainerStyle={{ paddingBottom: 140 }}
+          contentContainerStyle={{ paddingBottom: 160 }}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -280,16 +278,12 @@ export default function Cart() {
             <Text style={styles.totalValue}>{naira(total)}</Text>
           </View>
           <Pressable
-            onPress={() =>
-              Alert.alert(
-                'Checkout',
-                'Please complete checkout on the website at jicofooties.netlify.app',
-                [{ text: 'OK' }]
-              )
-            }
+            onPress={() => {
+              Linking.openURL('https://jicofooties.netlify.app/checkout');
+            }}
             style={styles.checkoutBtn}
           >
-            <Text style={styles.checkoutText}>Continue on website</Text>
+            <Text style={styles.checkoutText}>Continue to checkout</Text>
           </Pressable>
         </View>
       )}
