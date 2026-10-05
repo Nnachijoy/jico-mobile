@@ -48,8 +48,9 @@ export default function Cart() {
     if (!user) return;
     const { data: cartItems, error } = await supabase
       .from('cart_items')
-      .select('id, quantity, variant_id')
-      .eq('user_id', user.id);
+      .select('id, quantity, variant_id, created_at')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: true });
 
     if (error || !cartItems) {
       setLoading(false);
