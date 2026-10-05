@@ -10,6 +10,7 @@ import {
   Platform,
   Alert,
   RefreshControl,
+  AppState,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RealtimeChannel } from '@supabase/supabase-js';
@@ -105,11 +106,20 @@ export default function Cart() {
     load();
   }, [load]);
 
-  // Real-time subscription, guarded by a ref so it only runs once per user.
+  // Polling every 3 seconds so cart stays in sync with the website
+  useEffect(() => {
+    const interval = setInterval(() => {
+      load();
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [load]);
+
+  // Real-time subscription (bonus)
   useEffect(() => {
     if (!user) return;
 
-    // If we already have a live channel, tear it down first
+    supabase.realtime.setAuth();
+
     if (channelRef.current) {
       supabase.removeChannel(channelRef.current);
       channelRef.current = null;
@@ -131,7 +141,7 @@ export default function Cart() {
       )
       .subscribe((status) => {
         if (status === 'CHANNEL_ERROR') {
-          console.warn('Realtime channel error, will retry on next focus');
+          console.warn('Realtime channel error — polling will keep cart fresh');
         }
       });
 
@@ -145,13 +155,32 @@ export default function Cart() {
     };
   }, [user, load]);
 
+  // Refresh on app foreground
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') load();
+    });
+    return () => sub.remove();
+  }, [load]);
+
   async function updateQty(id: string, quantity: number) {
-    if (quantity < 1) {
-      await supabase.from('cart_items').delete().eq('id', id);
-    } else {
-      await supabase.from('cart_items').update({ quantity }).eq('id', id);
-    }
+    if (quantity < 1) return;
+    await supabase.from('cart_items').update({ quantity }).eq('id', id);
     load();
+  }
+
+  function removeItem(id: string, name: string) {
+    Alert.alert('Remove item', `Remove "${name}" from your cart?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: async () => {
+          await supabase.from('cart_items').delete().eq('id', id);
+          load();
+        },
+      },
+    ]);
   }
 
   const total = items.reduce(
@@ -180,8 +209,8 @@ export default function Cart() {
         <View style={styles.center}>
           <Text style={styles.empty}>Your cart is empty.</Text>
           <Text style={styles.emptySub}>
-            Add items on the website or from the Shop tab — they sync here in
-            real time.
+            Add items on the website or from the Shop tab — they sync here
+            automatically.
           </Text>
         </View>
       ) : (
@@ -211,7 +240,11 @@ export default function Cart() {
                 <View style={styles.qtyRow}>
                   <Pressable
                     onPress={() => updateQty(item.id, item.quantity - 1)}
-                    style={styles.qtyBtn}
+                    disabled={item.quantity <= 1}
+                    style={[
+                      styles.qtyBtn,
+                      item.quantity <= 1 && { opacity: 0.3 },
+                    ]}
                   >
                     <Text style={styles.qtyBtnText}>−</Text>
                   </Pressable>
@@ -221,6 +254,14 @@ export default function Cart() {
                     style={styles.qtyBtn}
                   >
                     <Text style={styles.qtyBtnText}>+</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() =>
+                      removeItem(item.id, item.variant!.product.name)
+                    }
+                    style={styles.removeBtn}
+                  >
+                    <Text style={styles.removeText}>Remove</Text>
                   </Pressable>
                 </View>
               </View>
@@ -297,6 +338,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     marginTop: 12,
+    flexWrap: 'wrap',
   },
   qtyBtn: {
     width: 28,
@@ -307,7 +349,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   qtyBtnText: { fontSize: 16, color: '#181917' },
-  qty: { fontSize: 13, color: '#181917' },
+  qty: { fontSize: 13, color: '#181917', minWidth: 20, textAlign: 'center' },
+  removeBtn: { marginLeft: 8, paddingVertical: 4 },
+  removeText: {
+    fontSize: 11,
+    color: '#77796f',
+    textDecorationLine: 'underline',
+  },
   price: { fontSize: 13, color: '#181917' },
   footer: {
     position: 'absolute',
