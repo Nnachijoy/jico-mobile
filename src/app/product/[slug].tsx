@@ -9,9 +9,11 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/auth';
 
@@ -41,6 +43,7 @@ export default function ProductDetail() {
   const [selected, setSelected] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -103,10 +106,7 @@ export default function ProductDetail() {
 
       if (error) throw error;
 
-      Alert.alert('Added', 'Added to your cart.', [
-        { text: 'Keep shopping' },
-        { text: 'View cart', onPress: () => router.push('/(tabs)/cart') },
-      ]);
+      setSheetOpen(true);
     } catch (e) {
       Alert.alert(
         'Error',
@@ -200,6 +200,59 @@ export default function ProductDetail() {
           )}
         </Pressable>
       </View>
+
+      {/* Added-to-cart bottom sheet */}
+      <Modal
+        visible={sheetOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setSheetOpen(false)}
+      >
+        <Pressable
+          style={styles.sheetBackdrop}
+          onPress={() => setSheetOpen(false)}
+        >
+          <Pressable style={styles.sheet} onPress={() => {}}>
+            <View style={styles.sheetHandle} />
+
+            <View style={styles.sheetHeader}>
+              <View style={styles.sheetIconWrap}>
+                <Ionicons name="checkmark" size={20} color="#fff" />
+              </View>
+              <Text style={styles.sheetTitle}>Added to cart</Text>
+              <Pressable
+                onPress={() => setSheetOpen(false)}
+                style={styles.sheetClose}
+                hitSlop={10}
+              >
+                <Ionicons name="close" size={20} color="#77796f" />
+              </Pressable>
+            </View>
+
+            <Text style={styles.sheetProduct} numberOfLines={1}>
+              {product.name} · Size {selected}
+            </Text>
+
+            <View style={styles.sheetActions}>
+              <Pressable
+                onPress={() => setSheetOpen(false)}
+                style={styles.sheetSecondaryBtn}
+              >
+                <Text style={styles.sheetSecondaryText}>Keep shopping</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setSheetOpen(false);
+                  router.push('/(tabs)/cart');
+                }}
+                style={styles.sheetPrimaryBtn}
+              >
+                <Text style={styles.sheetPrimaryText}>View cart</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -263,6 +316,90 @@ const styles = StyleSheet.create({
     color: '#fff',
     letterSpacing: 2,
     fontSize: 11,
+    textTransform: 'uppercase',
+  },
+
+  // Bottom sheet
+  sheetBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  sheet: {
+    backgroundColor: '#f5f3ee',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingTop: 12,
+    paddingHorizontal: 24,
+    paddingBottom: 34,
+  },
+  sheetHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(0,0,0,0.15)',
+    alignSelf: 'center',
+    marginBottom: 20,
+  },
+  sheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  sheetIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#465041',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  sheetTitle: {
+    fontSize: 17,
+    color: '#181917',
+    fontFamily: Platform.select({ ios: 'Georgia', android: 'serif' }),
+    flex: 1,
+  },
+  sheetClose: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sheetProduct: {
+    fontSize: 13,
+    color: '#77796f',
+    marginTop: 4,
+    marginBottom: 24,
+  },
+  sheetActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  sheetSecondaryBtn: {
+    flex: 1,
+    paddingVertical: 15,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.2)',
+    alignItems: 'center',
+  },
+  sheetSecondaryText: {
+    fontSize: 11,
+    letterSpacing: 2,
+    color: '#181917',
+    textTransform: 'uppercase',
+  },
+  sheetPrimaryBtn: {
+    flex: 1,
+    paddingVertical: 15,
+    backgroundColor: '#465041',
+    alignItems: 'center',
+  },
+  sheetPrimaryText: {
+    fontSize: 11,
+    letterSpacing: 2,
+    color: '#fff',
     textTransform: 'uppercase',
   },
 });
