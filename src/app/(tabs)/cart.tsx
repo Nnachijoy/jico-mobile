@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/auth';
 
@@ -39,6 +40,7 @@ export default function Cart() {
   const [items, setItems] = useState<CartLine[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const channelRef = useRef<RealtimeChannel | null>(null);
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -103,11 +105,18 @@ export default function Cart() {
     load();
   }, [load]);
 
+  // Real-time subscription, guarded by a ref so it only runs once per user.
   useEffect(() => {
     if (!user) return;
 
+    // If we already have a live channel, tear it down first
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
+    }
+
     const channel = supabase
-      .channel('cart-sync')
+      .channel(`cart-sync-${user.id}-${Date.now()}`)
       .on(
         'postgres_changes',
         {
@@ -116,12 +125,23 @@ export default function Cart() {
           table: 'cart_items',
           filter: `user_id=eq.${user.id}`,
         },
-        () => load()
+        () => {
+          load();
+        }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR') {
+          console.warn('Realtime channel error, will retry on next focus');
+        }
+      });
+
+    channelRef.current = channel;
 
     return () => {
-      supabase.removeChannel(channel);
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
     };
   }, [user, load]);
 

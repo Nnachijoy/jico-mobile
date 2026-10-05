@@ -22,6 +22,7 @@ export default function SignIn() {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   async function submit() {
     if (!email || !password) {
@@ -112,16 +113,26 @@ export default function SignIn() {
 
           <View style={styles.field}>
             <Text style={styles.label}>Password</Text>
-            <TextInput
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              autoComplete={
-                mode === 'signin' ? 'current-password' : 'new-password'
-              }
-              style={styles.input}
-              placeholderTextColor="#a5a79b"
-            />
+            <View style={styles.passwordRow}>
+              <TextInput
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                autoComplete={
+                  mode === 'signin' ? 'current-password' : 'new-password'
+                }
+                style={styles.passwordInput}
+                placeholderTextColor="#a5a79b"
+              />
+              <Pressable
+                onPress={() => setShowPassword((s) => !s)}
+                style={styles.showBtn}
+              >
+                <Text style={styles.showBtnText}>
+                  {showPassword ? 'Hide' : 'Show'}
+                </Text>
+              </Pressable>
+            </View>
           </View>
 
           <Pressable
@@ -178,6 +189,25 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 15,
     color: '#181917',
+  },
+  passwordRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.25)',
+  },
+  passwordInput: {
+    flex: 1,
+    paddingVertical: 10,
+    fontSize: 15,
+    color: '#181917',
+  },
+  showBtn: { paddingHorizontal: 8, paddingVertical: 8 },
+  showBtnText: {
+    fontSize: 10,
+    letterSpacing: 2,
+    color: '#77796f',
+    textTransform: 'uppercase',
   },
   primaryBtn: {
     backgroundColor: '#465041',
